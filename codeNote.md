@@ -10,8 +10,10 @@
 import os
 os.listdir('../data/books_text_full/test/')
 data_path = '../data/books_text_full/test/'
-filename = '../data/books_text_full/test/13th_Reality-1.txt'
+filename = '../data/books_text_full/test/13th_Reality-4.txt'
 ```
+
+## I. vocabulary 만들기
 
 **define vocabulary**
 
@@ -89,14 +91,24 @@ print(len(vocab))
 print(vocab.most_common(50))
 
 # token을 min_occurence 기준으로 유지합니다.
-min_occurence = 2
+min_occurence = 1
 tokens = [k for k,c in vocab.items() if c >= min_occurence]
 print(len(tokens))
 # token을 vocab 파일로 저장합니다.
 save_list(tokens, 'corpusToLines_vocab.txt')
+print("\n# 단어 {}개의 [corpusToLines_vocab.txt]로 저장했습니다.".format(len(tokens)))
+
+# 보카를 불러옵니다.
+vocab_filename = 'corpusToLines_vocab.txt'
+vocab = load_doc(vocab_filename)
+vocab = vocab.split()
+vocab = set(vocab)
+print("# 단어 {}개의 [{}]을 [vocab]으로 불러왔습니다.".format(len(vocab), vocab_filename))
 ```
 
-**전체 코퍼스를 문장 단위 리스트로 만들기**
+## II. corpusToLines: 전체 코퍼스를 문장 단위 리스트로 만들기
+
+**total_lines**
 
 ```python
 from string import punctuation
@@ -116,21 +128,9 @@ def load_doc(filename):
 
 def doc_to_lines(doc):
     total_lines = []
-    lines = [i for i in doc.splitlines() if i]
+    lines = [i.lower() for i in doc.splitlines() if i]  # 공백 문장 제거 및 모든 문장 소문자 변경
 
     return lines
-
-
-def process_docs(directory, vocab, is_train):
-    total_lines = []
-    for filename in listdir(directory):
-        path = directory + '/' + filename
-        doc = load_doc(path)
-        doc_lines = doc_to_lines(doc)
-
-        total_lines += doc_lines
-
-    return total_lines
 
 
 def save_total_lines(lines, filename):
@@ -139,14 +139,15 @@ def save_total_lines(lines, filename):
     file.write(data)
     file.close()
 
-
-# 모든 training set을 불러옵니다.
-train_docs = process_docs(data_path, vocab, True)
-sentences = train_docs
-print('Total training sentences: %d' % len(sentences))
-
 save_list(sentences, 'total_lines.txt')
-print("tota_lines {}개가 [total_lines.txt]로 저장되었습니다.".format(len(sentences)))
+print("# 문장 {}개의 [total_lines.txt]로 저장했습니다.".format(len(sentences)))
+filename = 'total_lines.txt'
+total_lines = load_doc(filename)
+total_lines = [i for i in total_lines.splitlines()]
+total_vocab = set()
+for i in total_lines:
+    total_vocab.update(i)
+print("# unique words in [total_lines.txt]: [{}]".format(len(total_vocab)))
 ```
 
 **clean_lines**:
@@ -154,17 +155,55 @@ print("tota_lines {}개가 [total_lines.txt]로 저장되었습니다.".format(l
 ```python
 def doc_to_clean_lines(filename):
     total_lines = load_doc(filename)
-    clean_lines = [i for i in text.splitlines() if len(i) > 3 if "." in i] # 3개 단어 이상으로 이루어지고 마침표가 있는 문장만 포함
+    clean_lines = [i.lower() for i in text.splitlines() if len(i) > 3 if "." in i] # 3개 단어 이상으로 이루어지고 마침표가 있는 문장만 포함
 
     return clean_lines
 
 filename = "total_lines.txt"
 clean_lines = doc_to_clean_lines(filename)
 save_list(clean_lines, 'clean_lines.txt')
-print("문장 {}개가 [clean_lines.txt]로 저장되었습니다.".format(len(clean_lines)))
+print("# 문장 {}개가 [clean_lines.txt]로 저장되었습니다.".format(len(clean_lines)))
+filename = 'clean_lines.txt'
+clean_lines = load_doc(filename)
+clean_lines = [i for i in clean_lines.splitlines()]
+clean_vocab = set()
+for i in clean_lines:
+    clean_vocab.update(i)
+print("# unique words in [clean_lines.txt]: [{}]".format(len(clean_vocab)))
 ```
 
+**vocab_lines**:
 
+```python
+def doc_to_vocab_lines(filename):
+    total_lines = load_doc(filename)
+    vocab_lines = []
+    for i in total_lines.splitlines():
+        words = i.split()
+        words = [word for word in words if word in vocab]
+        words = [word for word in words if len(words) >= 5]
+        vocab_line = " ".join(words)
+        if len(vocab_line):
+            vocab_line += "."
+            vocab_line = [vocab_line]
+            vocab_lines += vocab_line
+
+    return vocab_lines
+
+filename = "clean_lines.txt"
+vocab_lines = doc_to_vocab_lines(filename)
+save_list(vocab_lines, 'vocab_lines.txt')
+print("# 문장 {}개가 [vocab_lines.txt]로 저장되었습니다.".format(len(vocab_lines)))
+filename = 'vocab_lines.txt'
+vocab_lines = load_doc(filename)
+vocab_lines = [i for i in vocab_lines.splitlines()]
+vocab_vocab = set()
+for i in vocab_lines:
+    vocab_vocab.update(i)
+print("# unique words in [vocab_lines.txt]: [{}]".format(len(vocab_vocab)))
+```
+
+## III. word2vec
 
 ---
 
