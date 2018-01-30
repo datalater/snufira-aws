@@ -205,6 +205,99 @@ print("# unique words in [vocab_lines.txt]: [{}]".format(len(vocab_vocab)))
 
 ## III. word2vec
 
+**list_lines: word2vec 만들기 전 모든 문장을 token 묶음의 리스트로 만들기**
+
+```python
+filename = "vocab_lines.txt"
+
+file = open(filename, 'r', errors='replace')
+text = file.read()
+file.close()
+
+vocab_lines = [i for i in text.splitlines()]
+
+list_lines = []
+for i in vocab_lines:
+    i = i.split()
+    list_lines.append(i)
+
+print(list_lines[0])
+```
+
+**word2vec**
+
+```python
+sentences = list_lines
+print("Total training sentences:{}".format(len(sentences)))
+
+wv_sz = 100
+# word2vec 모델을 훈련시킵니다.
+model = Word2Vec(sentences, size=wv_sz, window=5, workers=8, min_count=1)
+# 모델의 vocabulary size를 요약합니다.
+words = list(model.wv.vocab)
+print("Vocabulary size: %d" % len(words))
+print("Wordvector size: %d" % (wv_sz))
+print("Embedding size: {}x{}".format(len(words), wv_sz))
+
+# 모델을 ASCII 포맷으로 저장합니다.
+filename = 'fantasy_embedding_word2vec.txt'
+model.wv.save_word2vec_format(filename, binary=False)
+print("\n# word2vec 파일 [{}]이 저장되었습니다.".format(filename))
+```
+
+## IV. Use pre-trained word vector
+
+**encoded_lines to Xtrain**
+
+```python
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+
+tokenizer = Tokenizer()
+tokenizer.fit_on_texts(vocab_lines)
+encoded_lines = tokenizer.texts_to_sequences(vocab_lines)
+print("-"*60,"# [vocab_lines]가 [encoded_lines]로 인코딩되었습니다.", "-"*60, sep='\n')
+print("BEFORE: \n{}".format(vocab_lines[0]))
+print("\nAFTER: \n{}".format(encoded_lines[0]))
+
+max_length = max([len(s.split()) for s in vocab_lines])
+Xtrain = pad_sequences(encoded_lines, maxlen=max_length, padding='post')
+print("\n","-"*60,"# [encoded_lines]가 [Xtrain]으로 패딩되었습니다. (max_length:{})".format(max_length), "-"*60, sep='\n')
+print("AFTER: \n{}".format(Xtrain[0]))
+```
+
+**load embedding and embedding_layer**
+
+```python
+from keras.layers import Embedding
+
+# embedding을 dictionary로 불러옵니다.
+def load_embedding(filename):
+    # embedding을 메모리에 올려두되 첫번째 줄은 생략합니다.
+    file = open(filename, 'r')
+    lines = file.readlines()[1:]
+    file.close()
+    # 단어와 벡터를 연결하는 map을 생성합니다.
+    embedding = {}
+    for line in lines:
+        parts = line.split()  # 1번째 voca의 word vector (100-d)
+        # parts[0] : 1번째 voca의 word vector의 1번째 값
+        embedding[parts[0]] = np.asarray(parts[1:], dtype='float32') # parts[0]이 key값이 되고, 나머지 99개가 value값
+    return embedding
+
+# 불러온 embedding을 기준으로 Embedding layer의 weight matrix를 생성합니다.
+def get_weight_matrix(embedding, vocab): # vocab = tokenizer_word_index (tokenizer의 vocabulary ex. master:11)
+    vocab_size = len(vocab) + 1 # for unknown words
+    weight_matrix = np.zeros((vocab_size, 100))
+    for word, i in vocab.items():
+        weight_matrix[i] = embedding.get(word) # embedding에서 tokenizer.word_index
+    return weight_matrix
+
+raw_embedding = load_embedding('fantasy_embedding_word2vec.txt')
+embedding_vectors = get_weight_matrix(raw_embedding, tokenizer.word_index)
+embedding_layer = Embedding(vocab_size, 100, weights=[embedding_vectors], input_length=max_length, trainable=False)
+```
+
 ---
 
 **END**
