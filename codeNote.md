@@ -8,7 +8,7 @@
 
 ```python
 import os
-os.listdir('../data/books_text_full/test/')
+os.listdir('.') # 현재 위치에서 파일 탐색하기
 data_path = '../data/books_text_full/test/'
 filename = '../data/books_text_full/test/13th_Reality-4.txt'
 ```
@@ -115,16 +115,11 @@ from string import punctuation
 from os import listdir
 from gensim.models import Word2Vec
 
-# 텍스트 파일의 내용을 변수 text로 리턴하는 함수
 def load_doc(filename):
-    # read only로 파일을 엽니다.
     file = open(filename, 'r', errors='replace')
-    # 모든 텍스트를 읽습니다.
     text = file.read()
-    # 파일을 닫습니다.
     file.close()
     return text
-
 
 def doc_to_lines(doc):
     total_lines = []
@@ -132,15 +127,20 @@ def doc_to_lines(doc):
 
     return lines
 
+def process_directory(data_path):
+    total_lines = []
+    for filename in listdir(data_path):
+        filepath = data_path + '/' + filename
+        doc = load_doc(filepath)
+        lines = doc_to_lines(doc)
+        print(filename, ":", len(lines))
+        total_lines += lines
+    return total_lines
 
-def save_total_lines(lines, filename):
-    data = "\n".join(lines)
-    file = open(filename, 'w')
-    file.write(data)
-    file.close()
 
+sentences = process_directory(data_path)
 save_list(sentences, 'total_lines.txt')
-print("# 문장 {}개의 [total_lines.txt]로 저장했습니다.".format(len(sentences)))
+print("\n# 문장 {}개의 [total_lines.txt]로 저장했습니다.".format(len(sentences)))
 filename = 'total_lines.txt'
 total_lines = load_doc(filename)
 total_lines = [i for i in total_lines.splitlines()]
@@ -155,7 +155,7 @@ print("# unique words in [total_lines.txt]: [{}]".format(len(total_vocab)))
 ```python
 def doc_to_clean_lines(filename):
     total_lines = load_doc(filename)
-    clean_lines = [i.lower() for i in text.splitlines() if len(i) > 3 if "." in i] # 3개 단어 이상으로 이루어지고 마침표가 있는 문장만 포함
+    clean_lines = [i.lower() for i in total_lines.splitlines() if len(i) > 5 if "." in i] # 5개 단어 이상으로 이루어지고 마침표가 있는 문장만 포함
 
     return clean_lines
 
@@ -176,9 +176,9 @@ print("# unique words in [clean_lines.txt]: [{}]".format(len(clean_vocab)))
 
 ```python
 def doc_to_vocab_lines(filename):
-    total_lines = load_doc(filename)
+    clean_lines = load_doc(filename)
     vocab_lines = []
-    for i in total_lines.splitlines():
+    for i in clean_lines.splitlines():
         words = i.split()
         words = [word for word in words if word in vocab]
         words = [word for word in words if len(words) >= 5]
@@ -293,9 +293,14 @@ def get_weight_matrix(embedding, vocab): # vocab = tokenizer_word_index (tokeniz
         weight_matrix[i] = embedding.get(word) # embedding에서 tokenizer.word_index
     return weight_matrix
 
+vocab_size = len(tokenizer.word_index) + 1  # tokenizer.word_index: 정수-단어 맵핑 딕셔너리
+
 raw_embedding = load_embedding('fantasy_embedding_word2vec.txt')
 embedding_vectors = get_weight_matrix(raw_embedding, tokenizer.word_index)
 embedding_layer = Embedding(vocab_size, 100, weights=[embedding_vectors], input_length=max_length, trainable=False)
+
+print("-"*60,"# [embedding_layer]가 생성되었습니다.", "-"*60, sep='\n')
+print("vocab_size:{} ".format(vocab_size))
 ```
 
 ---
