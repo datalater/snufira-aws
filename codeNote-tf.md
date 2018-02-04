@@ -306,6 +306,10 @@ embedding = np.asarray(embd)
 + embedding vector size = 128
 + embedding matrix (W).shape = [Vocabulary * embedding vector size]
 
+```python
+sequence_length = max_length
+```
+
 **input**:
 
 ```python
