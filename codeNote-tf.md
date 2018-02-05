@@ -2,6 +2,10 @@
 
 (c) JMC 2018
 
+**Reference of CNN codes**
++ https://agarnitin86.github.io/blog/2016/12/23/text-classification-cnn
++ http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/
+
 ---
 
 **데이터 파일 디렉토리 찾기**
@@ -13,7 +17,7 @@ data_path = '../data/books_text_full/test/'
 filename = '../data/books_text_full/test/13th_Reality-4.txt'
 ```
 
-## I. vocabulary 만들기
+## I. Vocabulary 만들기
 
 **define vocabulary**
 
@@ -23,62 +27,51 @@ from os import listdir
 from collections import Counter
 from nltk.corpus import stopwords
 
-# 텍스트 파일의 내용을 변수 text로 리턴하는 함수
 def load_doc(filename):
-    # read only로 파일을 엽니다.
-    file = open(filename, 'r', errors='replace')
-    # 모든 텍스트를 읽습니다.
+    """
+    load the documents
+    """
+    file = open(filename, 'r', errors='ignore')
     text = file.read()
-    # 파일을 닫습니다.
     file.close()
     return text
 
 def clean_doc(doc):
-    # white space 기준으로 tokenize 합니다.
+    """
+    clean the documents
+    (1) exclude punctuation (2) only include alphabet tokens
+    (3) exclude stopwords (4) exclude tokens of which length is 1
+    """
     tokens = doc.split()
-    # 각 token에서 모든 구두점을 삭제합니다.
     table = str.maketrans('', '', punctuation)
     tokens = [w.translate(table) for w in tokens]
-    # 각 token에서 alaphabet으로만 이루어지지 않은 모든 단어를 삭제합니다.
-    tokens = [word for word in tokens if word.isalpha()]
-    # 각 token에서 stopwrods를 삭제합니다.
+    tokens = [word.lower() for word in tokens if word.isalpha()]
     stop_words = set(stopwords.words('english'))
     tokens = [w for w in tokens if not w in stop_words]
-    # 각 token에서 1글자 이하인 모든 단어를 삭제합니다.
     tokens = [word for word in tokens if len(word) > 1]
     return tokens
 
-# 텍스트 파일을 불러와서 vocab에 추가하는 함수
 def add_doc_to_vocab(filename, vocab):
-    # 텍스트 파일을 불러옵니다.
+    """
+    update vocabulary using tokens after loading and cleaning the documents
+    """
     doc = load_doc(filename)
-    # 텍스트 파일을 clean toekn으로 리턴합니다.
     tokens = clean_doc(doc)
-    # clean token을 vocab에 추가합니다.
     vocab.update(tokens)
 
-# 폴더에 있는 모든 문서를 vocab에 추가하는 함수
 def process_docs(directory, vocab, is_train):
-    # 폴더에 있는 모든 파일을 순회합니다.
     for filename in listdir(directory):
-        # 인덱스가 새겨진 파일 이름과 is_train 인자를 기준으로 test set으로 분류할 모든 파일을 건너뜁니다.
         if is_train and filename.startswith('cv9'):
             continue
         if not is_train and not filename.startswith('cv9'):
             continue
-        # 폴더에 있는 파일의 절대 경로를 구합니다.
         path = directory + '/' + filename
-        # 텍스트 파일을 불러와서 vocab에 추가하는 함수를 실행합니다.
         add_doc_to_vocab(path, vocab)
 
 def save_list(lines, filename):
-    # 각 문장을 하나의 텍스트 일부로 바꿉니다.
     data = '\n'.join(lines)
-    # 파일을 쓰기 모드로 엽니다.
     file = open(filename, 'w')
-    # 변환한 텍스트를 파일에 씁니다.
     file.write(data)
-    # 파일을 닫습니다.
     file.close()
 
 # vocab을 Counter() 객체로 할당합니다.
@@ -297,7 +290,75 @@ embedding = np.asarray(embd)
 
 ## V. Build a model using TensorFlow
 
-### 01 Embedding Layer
+**complete code for Embedding Layer**
+
+```python
+sequence_length = max_length
+input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")
+
+with tf.device('/cpu:0'), tf.name_scope("embedding"):
+    W = tf.Variable(tf.constant(0.0, shape=[vocab_size, embedding_dim]), trainable=False, name="W")
+    embedding_placeholder = tf.placeholder(tf.float32, [vocab_size, embedding_dim])
+    embedding_init = W.assign(embedding_placeholder)
+
+    embedded_chars = tf.nn.embedding_lookup(W, input_x)
+    embedded_chars_expanded = tf.expand_dims(embedded_chars, -1)
+```
+
+**complete code for Convolution and Max-pooling Layers**
+
+```python
+def conv_and_pool(embedded_chars_expanded):
+    """
+    arg : embedded_chars_expanded means embedding layer's output
+    """
+
+    #convolution layer
+
+    filter_sizes = [3, 4, 5]
+    num_filters = 128
+
+    pooled_outputs = []
+    for i, filter_size in enumerate(filter_sizes):
+        with tf.name_scope("conv-maxpool-%s" % filter_size):
+            # Convolution Layer
+            filter_shape = [filter_size, wv_sz, 1, num_filters]
+            W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="W")
+            b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
+            conv = tf.nn.conv2d(
+                embedded_chars_expanded,
+                W,
+                strides=[1, 1, 1, 1],
+                padding="VALID",
+                name="conv")
+            # Apply nonlinearity
+            h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
+            # Max-pooling over the outputs
+            pooled = tf.nn.max_pool(
+                h,
+                ksize=[1, sequence_length - filter_size + 1, 1, 1],
+                strides=[1, 1, 1, 1],
+                padding='VALID',
+                name="pool")
+            pooled_outputs.append(pooled)
+
+    num_filters_total = num_filters * len(filter_sizes)
+    h_pool = tf.concat(pooled_outputs, 3)
+    h_pool_flat = tf.reshape(h_pool, [-1, num_filters_total])
+
+    return h_pool_flat
+
+h_pool_flat = conv_and_pool(embedded_chars_expanded)
+print(h_pool_flat)
+```
+
+**loss**:
+
+
+
+---
+
+### appendix#01 Embedding Layer
 
 **hyperparameters**:
 
@@ -349,7 +410,7 @@ sess.run(embedding_init, feed_dict={embedding_placeholder: embedding})
 **embedding lookup (embedding layer's operation)**
 
 ```python
-embedded_chars = tf.nn.embedding_lookup(W, self.input_x)
+embedded_chars = tf.nn.embedding_lookup(W, input_x)
 ```
 
 각 문장에 포함된 각 단어들은 embedding matrix를 look up 해서 해당하는 word vector 값을 리턴한다.
@@ -363,7 +424,7 @@ embedded_chars = tf.nn.embedding_lookup(W, self.input_x)
 
 
 ```python
-embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
+embedded_chars_expanded = tf.expand_dims(embedded_chars, -1)
 ```
 
 **layer output**
@@ -373,7 +434,7 @@ embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
 
 ![embedded_chars_expanded](./images/embedded_chars_expanded.jpg)
 
-### 02 Convolution Layer
+### appendix#02 Convolution Layer
 
 **hyperparameters**:
 
@@ -393,7 +454,7 @@ embedded_chars_expanded가 input이 된다.
 
 + embedded_chars_expanded.shape : `[batch_size, sequence_length, embedding_vector_length, 1]`
 
-**conv layer**:
+**conv layer (complete code)**:
 
 ```python
 # To be explained in the next pooling layer
@@ -407,7 +468,7 @@ for i, filter_size in enumerate(filter_sizes):
         W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="W")
         b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
         conv = tf.nn.conv2d(
-            self.embedded_chars_expanded,
+            embedded_chars_expanded,
             W,
             strides=[1, 1, 1, 1],
             padding="VALID",
@@ -441,21 +502,23 @@ h = tf.nn.relu(tf.nn.bias_add(conv, b), name='relu')
 + for filter_size (4) : `[batch_size * ( (max_length - 4) + 1 ) * 1 * num_filters]`
 + for filter_size (5) : `[batch_size * ( (max_length - 5) + 1 ) * 1 * num_filters]`
 
-### 03 Max-pooling Layer
+### appendix#03 Max-pooling Layer
 
 **hyperparameters**:
 
 + ksize : shape of pool operator `[1 * ( (max_length - 5) + 1 ) * 1 * num_filters]`
 + stride length : same as conv2d `[1 * 1 * 1 * 1]`
 
+> **Note**: ksize : `[1 * max range of row * max range of colum * num_filters]`
+
 **layer input**:
 
-`@@@resume:`
+convolution layer에 포함된 3개의 필터에 대한 output 3개 각각이 input이 된다.
+연산의 형태는 동일하므로 여기서는 필터 사이즈 3에 대해서 설명하겠다.
 
-+ https://agarnitin86.github.io/blog/2016/12/23/text-classification-cnn
-+ http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/
++ for filter_size (3) : `[batch_size * ( (max_length - 3) + 1 ) * 1 * num_filters]`
 
-**max-pool layer**:
+**max-pool layer (complete code)**:
 
 ```python
 pooled_outputs = []
@@ -466,7 +529,7 @@ for i, filter_size in enumerate(filter_sizes):
         W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="W")
         b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
         conv = tf.nn.conv2d(
-            self.embedded_chars_expanded,
+            embedded_chars_expanded,
             W,
             strides=[1, 1, 1, 1],
             padding="VALID",
@@ -484,16 +547,33 @@ for i, filter_size in enumerate(filter_sizes):
 
 # Combine all the pooled features
 num_filters_total = num_filters * len(filter_sizes)
-self.h_pool = tf.concat(3, pooled_outputs)
-self.h_pool_flat = tf.reshape(self.h_pool, [-1, num_filters_total])
+h_pool = tf.concat(3, pooled_outputs)
+h_pool_flat = tf.reshape(h_pool, [-1, num_filters_total])
 ```
+
+**layer output**:
+
++ pooled.shape = `[1 * 1 * 128]`
 
 **merging all the outputs**:
 
-`@@@resume:`
+```python
+h_pool = tf.concat(3, pooled_outputs)
+```
 
-+ https://agarnitin86.github.io/blog/2016/12/23/text-classification-cnn
-+ http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/
++ h_pool.shape = `[batch_size * 3 * 1 * 1 * 128]`
+
+**reshape**
+
+```python
+num_filters_total = num_filters * len(filter_sizes)
+h_pool_flat = tf.reshape(h_pool, [-1, num_filters_total])
+```
+
++ h_pool_flat.shape = `[batch_size, (3 * 128)]`
+
+---
+
 
 
 ---
