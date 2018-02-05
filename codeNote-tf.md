@@ -306,6 +306,10 @@ embedding = np.asarray(embd)
 + embedding vector size = 128
 + embedding matrix (W).shape = [Vocabulary * embedding vector size]
 
+```python
+sequence_length = max_length
+```
+
 **input**:
 
 ```python
@@ -316,8 +320,8 @@ embedding layer에 입력되는 input_x를 플레이스홀더로 선언했다.
 플레이스홀더 input_x의 shape는 (문장개수 in 1 batch, 최대 문장길이)이다.
 input_x는 인코딩된 문장인 encoded_lines로 구성되어있으며 encoded_lines의 각 단어는 숫자로 맵핑되어 있다.
 
-+ `input_x = (np.array([[1,2,3,4,5,6]]), np.array([1,7,8,4,6,0], ...))`
-+ `input_x.shape` : [batch_size, sequence_length]
++ input_x : `(np.array([[1,2,3,4,5,6]]), np.array([1,7,8,4,6,0], ...))`
++ input_x.shape : `[batch_size, sequence_length]`
 
 **embedding layer**:
 
