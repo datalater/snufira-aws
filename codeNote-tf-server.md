@@ -95,7 +95,7 @@ for i, dir_name in enumerate(dir_list):
 
 min_occurence = 1
 tokens = [k for k,c in vocab.items() if c >= min_occurence]
-print(len(tokens))
+# print(len(tokens))
 
 save_list(tokens, 'corpusToLines_vocab.txt')
 print("\n# 단어 {}개의 [corpusToLines_vocab.txt]로 저장했습니다.".format(len(tokens)))
