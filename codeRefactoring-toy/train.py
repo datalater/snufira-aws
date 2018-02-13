@@ -41,10 +41,9 @@ print("# [{}] is loaded as [vocab].".format(vocab_filename))
 print("\n# Data preparation")
 print("#", "="*70)
 
-sentences = dh.process_directory(data_path)
-dh.save_list(sentences, 'total_lines.txt')
-print("# 문장 {}개가 [total_lines.txt]로 저장되었습니다.".format(len(sentences)))
-filename = 'total_lines.txt'
+total_lines = dh.process_directory(data_path)
+dh.save_list(total_lines, 'total_lines.txt')
+print("# 문장 {}개가 [total_lines.txt]로 저장되었습니다.".format(len(total_lines)))
 
 filename = "total_lines.txt"
 clean_lines = dh.doc_to_clean_lines(filename)
@@ -72,6 +71,8 @@ print("# [vocab_lines]가 [x_data]로 인코딩 및 패딩 되었습니다. (max
 # vocab_size = len(vocab_dict.keys())
 # print("\n", "-"*80,"# 최종 [vocab_dict] (vocab_size: {})".format(vocab_size), "-"*80, sep='\n')
 # print("EXAMPLE: \n[{}] is mapped to [{}].".format(vocab_lines[0].split()[0], vocab_dict[vocab_lines[0].split()[0]]))
+
+del total_lines, clean_lines, vocab_lines, encoded_lines
 
 
 # Word2Vec
@@ -180,18 +181,18 @@ for si in range(num_sentence - 3):
             cossi2 = cl.cossim(cnn_output[si+1], cnn_output[ssi+2])
             cossi3 = cl.cossim(cnn_output[si+2], cnn_output[ssi+2])
 
-            cossi = tf.subtract(tf.div(tf.add(cossi1, cossi3),2), cossi2)
+            cossi = tf.abs(tf.subtract(tf.div(tf.add(cossi1, cossi3),2), cossi2))
 
             loss = tf.add(loss,cossi)
 
 loss = tf.reshape(loss, [])
-tf.summary.scalar("loss", loss)
+# tf.summary.scalar("loss", loss)
 
 optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.01).minimize(loss)
-merge_op = tf.summary.merge_all()
+# merge_op = tf.summary.merge_all()
 
 sess = tf.Session()
-summary_writer = tf.summary.FileWriter("./logs", sess.graph)
+# summary_writer = tf.summary.FileWriter("./logs", sess.graph)
 sess.run(tf.global_variables_initializer())
 
 batch_size = 32
@@ -199,7 +200,7 @@ total_batch = int(len(x_data) / batch_size)
 
 for epoch in range(5):
     total_loss = 0
-    k = 0
+    # k = 0
 
     for i in range(0, len(x_data), batch_size):
         x_batch = x_data[i:i+batch_size]
@@ -209,10 +210,10 @@ for epoch in range(5):
 
         total_loss += loss_val
 
-        if i % batch_size == 0:
-            summary = sess.run(merge_op, feed_dict={input_x: x_batch})
-            summary_writer.add_summary(summary, k)
-        k += 1
+        # if i % batch_size == 0:
+            # summary = sess.run(merge_op, feed_dict={input_x: x_batch})
+            # summary_writer.add_summary(summary, k)
+        # k += 1
 
     print("Epoch: %04d" % (epoch + 1))
     print("Avg. cost: {}".format(total_loss / total_batch))
