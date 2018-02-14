@@ -195,7 +195,14 @@ merge_op = tf.summary.merge_all()
 saver = tf.train.Saver()
 
 sess = tf.Session()
-summary_writer = tf.summary.FileWriter("./logs", sess.graph)
+
+import time
+current_time = time.strftime("_%H%M%S")
+current_date = time.strftime("%Y%m%d")
+
+logs = "./logs/" + current_date + current_time
+
+summary_writer = tf.summary.FileWriter(logs, sess.graph)
 sess.run(tf.global_variables_initializer())
 
 batch_size = 32
@@ -203,7 +210,6 @@ total_batch = int(len(x_data) / batch_size)
 
 for epoch in range(5):
     total_loss = 0
-    k = 0
 
     for i in range(0, len(x_data), batch_size):
         x_batch = x_data[i:i+batch_size]

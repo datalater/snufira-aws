@@ -85,6 +85,11 @@ FastSent는 같은 신호를 이용하도록 설계된 간단한 sentence model�
 context 문장을 BOW로 나타낸 상태에서 FastSent 모델은 인접한 문장을 BoW로 나타내서 예측한다.
 
 
+## 07 A Structured Self-attentive Sentence Embedding
+
+
+
+
 
 
 ---
