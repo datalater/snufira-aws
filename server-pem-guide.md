@@ -42,7 +42,7 @@ ubuntu 사용자는 sudoer이므로 'sudo' 명령어를 통해 root 권한을 �
 
 + 처음 process 실행
 
-`sudo nvidia-docker start <name:cnn_nlp>`
+`sudo nvidia-docker start cnn_nlp`
 
 ---
 
@@ -50,7 +50,7 @@ ubuntu 사용자는 sudoer이므로 'sudo' 명령어를 통해 root 권한을 �
 
 + docker process attach (enter the command below and press enter)
 
-`sudo nvidia-docker attach <prcoess_name:cnn_nlp>`
+`sudo nvidia-docker attach cnn_nlp`
 
 + docker process detach (ctrl+p ctrl+q)
 
