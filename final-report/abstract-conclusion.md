@@ -78,7 +78,13 @@ DAE는 다양한 길이를 가진 문장에 noise 함수를 적용한다.
 학습된 모델은 새로운 문장을 distributed representation으로 인코드할 수 있다.
 SkipThought와 달리 SDAEs는 문장의 연속성이 없는 아무런 순서가 없는 문장에서도 sentence embedding을 할 수 있다.
 
-**FastSent**: 
+**FastSent**: SkipThought의 성능이 잘 나오는 것을 보면 인접한 문장의 내용으로 sentence semantics를 유추할 수 있다는 것을 알 수 있다.
+SkipThought 모델은 sentence-level에서 distributional hypothesis를 적용한 것이라고 볼 수 있다.
+그럼에도 불구하고 많은 깊은 신경망 모델과 마찬가지로 SkipThought는 훈련시키려면 매우 오래 걸린다.
+FastSent는 같은 신호를 이용하도록 설계된 간단한 sentence model인데 비용이 매우 저렴하다.
+context 문장을 BOW로 나타낸 상태에서 FastSent 모델은 인접한 문장을 BoW로 나타내서 예측한다.
+
+
 
 
 ---
